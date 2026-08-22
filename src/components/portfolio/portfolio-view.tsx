@@ -6,6 +6,7 @@ import { useAppStore } from "@/components/app-store-provider"
 import { THERAPIES, getAllDrugs } from "@/lib/therapies"
 import { getFilledNotesCount, hasNotesContent, calculateOverallProgress } from "@/lib/mappers"
 import { downloadJson } from "@/lib/storage"
+import { generateStudentPdf, formatStudentFilename } from "@/lib/pdf-report"
 import {
   User,
   GraduationCap,
@@ -20,6 +21,7 @@ import {
   Pill,
   ExternalLink,
   Sparkles,
+  RefreshCw,
 } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -27,6 +29,7 @@ import { Badge } from "@/components/ui/badge"
 export function PortfolioView() {
   const { data, hydrated } = useAppStore()
   const [activeFilter, setActiveFilter] = useState<"all" | "completed" | "has_notes">("all")
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false)
 
   const profile = data?.profile || {
     id: "",
@@ -96,15 +99,46 @@ export function PortfolioView() {
     return portfolioItems.filter((i) => i.hasContent).length
   }, [portfolioItems])
 
+  // Ekspor JSON dengan nama berkas Nama_NIM.json
   const handleExportBackup = () => {
     if (data) {
-      downloadJson(data, `PharmaLog-PKPA-${profile.nim || "Portofolio"}.json`)
+      const defaultFilename = formatStudentFilename(profile, "json")
+      downloadJson(data, defaultFilename)
     }
   }
 
+  // Unduh PDF Resmi dengan nama berkas Nama_NIM.pdf
+  const handleDownloadPdf = async () => {
+    setIsGeneratingPdf(true)
+    try {
+      const defaultFilename = formatStudentFilename(profile, "pdf")
+      await generateStudentPdf(
+        {
+          profile,
+          entries,
+          completedDrugsCount: overall.completed,
+          filledNotesCount: totalNotesFilled,
+        },
+        defaultFilename
+      )
+    } catch (err) {
+      console.error("Gagal cetak PDF:", err)
+      alert("Gagal mengunduh dokumen PDF. Silakan coba kembali atau gunakan tombol Cetak.")
+    } finally {
+      setIsGeneratingPdf(false)
+    }
+  }
+
+  // Dialog Cetak Browser dengan default file title Nama_NIM
   const handlePrint = () => {
     if (typeof window !== "undefined") {
+      const originalTitle = document.title
+      const defaultFilename = formatStudentFilename(profile, "pdf").replace(/\.pdf$/i, "")
+      document.title = defaultFilename
       window.print()
+      setTimeout(() => {
+        document.title = originalTitle
+      }, 1500)
     }
   }
 
@@ -145,17 +179,33 @@ export function PortfolioView() {
 
           {/* Tombol Cetak & Ekspor (Disembunyikan saat dicetak) */}
           <div className="flex flex-wrap items-center gap-2 print:hidden">
-            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5">
-              <Printer className="size-4 text-slate-600" />
-              <span>Cetak / PDF</span>
-            </Button>
             <Button
               variant="default"
               size="sm"
-              onClick={handleExportBackup}
-              className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-white"
+              onClick={handleDownloadPdf}
+              disabled={isGeneratingPdf}
+              className="bg-emerald-600 hover:bg-emerald-700 gap-1.5 text-white shadow-xs"
             >
-              <Download className="size-4" />
+              {isGeneratingPdf ? (
+                <RefreshCw className="size-4 animate-spin" />
+              ) : (
+                <Download className="size-4" />
+              )}
+              <span>{isGeneratingPdf ? "Menyiapkan PDF..." : "Unduh PDF"}</span>
+            </Button>
+
+            <Button variant="outline" size="sm" onClick={handlePrint} className="gap-1.5 text-slate-700">
+              <Printer className="size-4 text-slate-600" />
+              <span>Cetak</span>
+            </Button>
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportBackup}
+              className="gap-1.5 text-slate-700"
+            >
+              <Download className="size-4 text-slate-600" />
               <span>Ekspor JSON</span>
             </Button>
           </div>
@@ -237,7 +287,7 @@ export function PortfolioView() {
             size="sm"
             variant={activeFilter === "all" ? "default" : "outline"}
             onClick={() => setActiveFilter("all")}
-            className={activeFilter === "all" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+            className={activeFilter === "all" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
           >
             Semua ({portfolioItems.length})
           </Button>
@@ -245,7 +295,7 @@ export function PortfolioView() {
             size="sm"
             variant={activeFilter === "completed" ? "default" : "outline"}
             onClick={() => setActiveFilter("completed")}
-            className={activeFilter === "completed" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+            className={activeFilter === "completed" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
           >
             Selesai ({overall.completed})
           </Button>
@@ -253,120 +303,135 @@ export function PortfolioView() {
             size="sm"
             variant={activeFilter === "has_notes" ? "default" : "outline"}
             onClick={() => setActiveFilter("has_notes")}
-            className={activeFilter === "has_notes" ? "bg-emerald-600 hover:bg-emerald-700" : ""}
+            className={activeFilter === "has_notes" ? "bg-emerald-600 hover:bg-emerald-700 text-white" : ""}
           >
             Ada Catatan ({totalNotesFilled})
           </Button>
         </div>
       </div>
 
-      {/* Daftar Tabel Rekap Logbook */}
-      <div className="space-y-4">
-        {filteredItems.length === 0 ? (
-          <div className="rounded-2xl border border-dashed p-10 text-center">
-            <Pill className="mx-auto size-8 text-muted-foreground" />
-            <p className="mt-2 text-sm text-muted-foreground">
-              Belum ada data obat yang sesuai dengan filter ini.
-            </p>
-          </div>
-        ) : (
-          <div className="overflow-hidden rounded-2xl border bg-white shadow-sm">
-            <div className="divide-y">
-              {filteredItems.map(({ drug, therapy, notes, isCompleted, hasContent }) => (
-                <div key={drug.id} className="p-5 transition hover:bg-slate-50/70">
-                  <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className="text-base font-bold text-slate-900">{drug.name}</span>
-                        {drug.genericName && (
-                          <span className="text-xs text-muted-foreground">({drug.genericName})</span>
-                        )}
-                        {isCompleted ? (
-                          <Badge className="bg-emerald-100 text-emerald-800 border-none">
-                            Selesai
-                          </Badge>
-                        ) : (
-                          <Badge variant="outline" className="text-slate-500">
-                            Dalam Progres
-                          </Badge>
-                        )}
-                      </div>
-                      <p className="text-xs text-muted-foreground">
-                        {therapy?.name || "Materi Farmakoterapi"} &bull; Golongan: {drug.drugClass || drug.category}
-                      </p>
-                    </div>
-
-                    <Button asChild size="sm" variant="ghost" className="self-start text-xs text-emerald-600 gap-1 print:hidden">
-                      <Link href={`/learning/${therapy?.id || "kardiovaskular"}/${drug.id}`}>
-                        Buka Detail <ExternalLink className="size-3" />
-                      </Link>
-                    </Button>
+      {/* Daftar Item Portofolio */}
+      {filteredItems.length === 0 ? (
+        <div className="flex min-h-[260px] flex-col items-center justify-center rounded-2xl border border-dashed bg-white p-8 text-center">
+          <Pill className="size-10 text-muted-foreground/50 mb-2" />
+          <h3 className="text-base font-semibold text-slate-900">Belum Ada Catatan Sesuai Filter</h3>
+          <p className="text-xs text-muted-foreground max-w-sm mt-1">
+            Buka menu Lembar Kerja Obat untuk mulai menulis catatan klinis atau menandai obat yang telah dipelajari.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {filteredItems.map((item) => (
+            <div
+              key={item.drug.id}
+              className="rounded-2xl border bg-white p-5 shadow-xs transition hover:border-emerald-200"
+            >
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between border-b pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex size-9 items-center justify-center rounded-xl bg-emerald-50 text-emerald-700">
+                    <Pill className="size-5" />
                   </div>
-
-                  {/* Isi Catatan Klinis Mahasiswa */}
-                  {hasContent ? (
-                    <div className="mt-4 grid grid-cols-1 gap-3 rounded-xl bg-slate-50 p-3.5 text-xs sm:grid-cols-2 lg:grid-cols-3">
-                      {notes.indication && (
-                        <div>
-                          <span className="font-semibold text-slate-600">Indikasi Klinis:</span>
-                          <p className="text-slate-800 mt-0.5">{notes.indication}</p>
-                        </div>
-                      )}
-                      {notes.dosage && (
-                        <div>
-                          <span className="font-semibold text-slate-600">Dosis &amp; Aturan Pakai:</span>
-                          <p className="text-slate-800 mt-0.5">{notes.dosage}</p>
-                        </div>
-                      )}
-                      {notes.sideEffects && (
-                        <div>
-                          <span className="font-semibold text-slate-600">Efek Samping:</span>
-                          <p className="text-slate-800 mt-0.5">{notes.sideEffects}</p>
-                        </div>
-                      )}
-                      {notes.contraindications && (
-                        <div>
-                          <span className="font-semibold text-slate-600">Kontraindikasi:</span>
-                          <p className="text-slate-800 mt-0.5">{notes.contraindications}</p>
-                        </div>
-                      )}
-                      {notes.interactions && (
-                        <div>
-                          <span className="font-semibold text-slate-600">Interaksi Obat:</span>
-                          <p className="text-slate-800 mt-0.5">{notes.interactions}</p>
-                        </div>
-                      )}
-                      {notes.specialInstructions && (
-                        <div>
-                          <span className="font-semibold text-slate-600">Instruksi &amp; Konseling:</span>
-                          <p className="text-slate-800 mt-0.5">{notes.specialInstructions}</p>
-                        </div>
-                      )}
-                    </div>
-                  ) : (
-                    <p className="mt-2 text-xs italic text-slate-400">
-                      Belum ada catatan logbook yang diisi untuk obat ini.
-                    </p>
-                  )}
-
-                  {/* Tag Obat */}
-                  {Array.isArray(notes.tags) && notes.tags.length > 0 && (
-                    <div className="mt-3 flex flex-wrap items-center gap-1.5">
-                      {notes.tags.map((tag) => (
-                        <span
-                          key={tag}
-                          className="rounded-md bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700"
-                        >
-                          #{tag}
-                        </span>
-                      ))}
-                    </div>
-                  )}
+                  <div>
+                    <h3 className="font-bold text-slate-900">{item.drug.name}</h3>
+                    <p className="text-xs text-muted-foreground">{item.therapy?.name || "Kelas Terapi"}</p>
+                  </div>
                 </div>
-              ))}
+
+                <div className="flex items-center gap-2">
+                  {item.isCompleted && (
+                    <Badge className="bg-emerald-100 text-emerald-800 border-emerald-200">
+                      ✓ Selesai
+                    </Badge>
+                  )}
+                  <Badge variant="outline" className="text-xs text-slate-600">
+                    {item.filledCount}/6 Parameter Klinis
+                  </Badge>
+                  <Link
+                    href={`/therapies/${item.therapy?.id}/drugs/${item.drug.id}`}
+                    className="text-xs font-semibold text-emerald-600 hover:text-emerald-700 inline-flex items-center gap-1 ml-2 print:hidden"
+                  >
+                    <span>Edit</span>
+                    <ExternalLink className="size-3" />
+                  </Link>
+                </div>
+              </div>
+
+              {/* Grid 6 Parameter Klinis Obat */}
+              <div className="mt-4 grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3 text-xs">
+                <div className="rounded-xl bg-slate-50/75 p-3">
+                  <span className="font-semibold text-slate-700 block mb-1">1. Indikasi Klinis</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.notes.indication || <span className="text-muted-foreground italic">Belum diisi</span>}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50/75 p-3">
+                  <span className="font-semibold text-slate-700 block mb-1">2. Dosis Lazim</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.notes.dosage || <span className="text-muted-foreground italic">Belum diisi</span>}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50/75 p-3">
+                  <span className="font-semibold text-slate-700 block mb-1">3. Aturan / Cara Pakai</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.notes.specialInstructions || <span className="text-muted-foreground italic">Belum diisi</span>}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50/75 p-3">
+                  <span className="font-semibold text-slate-700 block mb-1">4. Efek Samping</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.notes.sideEffects || <span className="text-muted-foreground italic">Belum diisi</span>}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50/75 p-3">
+                  <span className="font-semibold text-slate-700 block mb-1">5. Kontraindikasi</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.notes.contraindications || <span className="text-muted-foreground italic">Belum diisi</span>}
+                  </p>
+                </div>
+
+                <div className="rounded-xl bg-slate-50/75 p-3">
+                  <span className="font-semibold text-slate-700 block mb-1">6. Interaksi Obat</span>
+                  <p className="text-slate-600 leading-relaxed">
+                    {item.notes.interactions || <span className="text-muted-foreground italic">Belum diisi</span>}
+                  </p>
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* Lembar Pengesahan Tanda Tangan */}
+      <div className="mt-12 rounded-2xl border bg-white p-8 print:border-none print:shadow-none">
+        <h3 className="text-center font-bold text-slate-900 text-sm uppercase tracking-wide mb-8">
+          Lembar Pengesahan Logbook PKPA
+        </h3>
+
+        <div className="grid grid-cols-2 gap-8 text-center text-xs">
+          <div className="space-y-16">
+            <p className="text-muted-foreground">Mahasiswa Praktikan,</p>
+            <div>
+              <p className="font-bold text-slate-900 underline underline-offset-4">
+                {profile.name || "( ................................................ )"}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">NIM: {profile.nim || "-"}</p>
             </div>
           </div>
-        )}
+
+          <div className="space-y-16">
+            <p className="text-muted-foreground">Apoteker Pembimbing / Preceptor,</p>
+            <div>
+              <p className="font-bold text-slate-900 underline underline-offset-4">
+                {profile.preceptorName || "( ................................................ )"}
+              </p>
+              <p className="text-[11px] text-muted-foreground mt-1">SIPAP / STRA: .......................................</p>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   )
