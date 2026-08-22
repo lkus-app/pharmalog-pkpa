@@ -1,6 +1,6 @@
 {
-  "name": "",
-  "description": "",
+  "name": "PharmaLog PKPA",
+  "description": "Aplikasi e-logbook dan portofolio pembelajaran klinis PKPA farmasi dengan katalog 23 kelas terapi, sinkronisasi cloud Supabase & local-first offline storage.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
