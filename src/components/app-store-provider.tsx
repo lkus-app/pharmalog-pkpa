@@ -13,7 +13,7 @@ import {
   normalizeAppData,
   sanitizeNotes,
 } from "@/lib/storage"
-import { isSupabaseConfigured, supabase } from "@/lib/supabase"
+import { isSupabaseConfigured, getSupabaseCredentials, saveSupabaseConfig, clearSupabaseConfig } from "@/lib/supabase"
 import type {
   AppData,
   DrugNotes,
@@ -42,6 +42,7 @@ interface AppStoreContextType {
   hydrated: boolean
   isLoading: boolean
   configured: boolean
+  isCloudConnected: boolean
   saveStatus: SaveStatus
   enter: (
     name: string,
@@ -73,6 +74,7 @@ interface AppStoreContextType {
   importBackup: (jsonString: string) => Promise<boolean>
   logout: () => void
   refreshData: () => Promise<void>
+  configureSupabase: (url: string, key: string) => Promise<boolean>
 }
 
 const AppStoreContext = createContext<AppStoreContextType | null>(null)
@@ -490,6 +492,20 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
     }
   }, [data.profile, loadStudentWorkspace])
 
+  const configureSupabase = useCallback(
+    async (url: string, key: string): Promise<boolean> => {
+      const ok = saveSupabaseConfig(url, key)
+      if (ok) {
+        if (data.profile) {
+          await loadStudentWorkspace(data.profile)
+        }
+        return true
+      }
+      return false
+    },
+    [data.profile, loadStudentWorkspace]
+  )
+
   const session = useMemo(() => data.profile, [data.profile])
   const isAdmin = useMemo(() => {
     return (
@@ -497,6 +513,10 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       data.profile?.nim?.toUpperCase() === "ADMIN001"
     )
   }, [data.profile])
+
+  const isCloudConnected = useMemo(() => {
+    return isSupabaseConfigured()
+  }, [configured, data.profile])
 
   const value = useMemo<AppStoreContextType>(
     () => ({
@@ -507,6 +527,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       isLoading,
       configured,
+      isCloudConnected,
       saveStatus,
       enter,
       setProfile,
@@ -523,6 +544,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       importBackup,
       logout,
       refreshData,
+      configureSupabase,
     }),
     [
       data,
@@ -531,6 +553,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       hydrated,
       isLoading,
       configured,
+      isCloudConnected,
       saveStatus,
       enter,
       setProfile,
@@ -547,6 +570,7 @@ export function AppStoreProvider({ children }: { children: React.ReactNode }) {
       importBackup,
       logout,
       refreshData,
+      configureSupabase,
     ]
   )
 

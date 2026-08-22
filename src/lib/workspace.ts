@@ -1,13 +1,14 @@
-import { supabase } from "@/lib/supabase"
+import { getSupabaseClient } from "@/lib/supabase"
 import type { AppData, DrugNotes, StudentProfile } from "@/lib/types"
 import { DEFAULT_APP_DATA, sanitizeNotes } from "@/lib/storage"
 
 export async function fetchWorkspace(studentId: string): Promise<AppData | null> {
-  if (!supabase || !studentId) return null
+  const client = getSupabaseClient()
+  if (!client || !studentId) return null
 
   try {
     // 1. Ambil Profil Mahasiswa
-    const { data: student } = await supabase
+    const { data: student } = await client
       .from("students")
       .select("*")
       .eq("id", studentId)
@@ -26,7 +27,7 @@ export async function fetchWorkspace(studentId: string): Promise<AppData | null>
     }
 
     // 2. Ambil Catatan Obat
-    const { data: progressList } = await supabase
+    const { data: progressList } = await client
       .from("drug_progress")
       .select("*")
       .eq("student_id", studentId)
@@ -43,7 +44,7 @@ export async function fetchWorkspace(studentId: string): Promise<AppData | null>
     }
 
     // 3. Ambil Favorit
-    const { data: favList } = await supabase
+    const { data: favList } = await client
       .from("favorites")
       .select("drug_id")
       .eq("student_id", studentId)
@@ -51,7 +52,7 @@ export async function fetchWorkspace(studentId: string): Promise<AppData | null>
     const favorites = (favList || []).map((f) => f.drug_id)
 
     // 4. Ambil Riwayat Dilihat
-    const { data: recentList } = await supabase
+    const { data: recentList } = await client
       .from("recent_drugs")
       .select("drug_id, therapy_id, viewed_at")
       .eq("student_id", studentId)
@@ -77,8 +78,9 @@ export async function fetchWorkspace(studentId: string): Promise<AppData | null>
 }
 
 export async function saveStudentProfile(profile: StudentProfile) {
-  if (!supabase || !profile.id) return
-  await supabase.from("students").upsert({
+  const client = getSupabaseClient()
+  if (!client || !profile.id) return
+  await client.from("students").upsert({
     id: profile.id,
     name: profile.name,
     nim: profile.nim,
@@ -103,8 +105,9 @@ export async function saveDrugNotes({
   notes: DrugNotes
   completed: boolean
 }) {
-  if (!supabase || !studentId || !drugId) return
-  await supabase.from("drug_progress").upsert(
+  const client = getSupabaseClient()
+  if (!client || !studentId || !drugId) return
+  await client.from("drug_progress").upsert(
     {
       student_id: studentId,
       therapy_id: therapyId,
@@ -118,20 +121,22 @@ export async function saveDrugNotes({
 }
 
 export async function saveFavorite(studentId: string, drugId: string, isFav: boolean) {
-  if (!supabase || !studentId || !drugId) return
+  const client = getSupabaseClient()
+  if (!client || !studentId || !drugId) return
   if (isFav) {
-    await supabase.from("favorites").upsert(
+    await client.from("favorites").upsert(
       { student_id: studentId, drug_id: drugId },
       { onConflict: "student_id,drug_id" }
     )
   } else {
-    await supabase.from("favorites").delete().match({ student_id: studentId, drug_id: drugId })
+    await client.from("favorites").delete().match({ student_id: studentId, drug_id: drugId })
   }
 }
 
 export async function saveDrugView(studentId: string, drugId: string, therapyId: string) {
-  if (!supabase || !studentId || !drugId) return
-  await supabase.from("recent_drugs").upsert(
+  const client = getSupabaseClient()
+  if (!client || !studentId || !drugId) return
+  await client.from("recent_drugs").upsert(
     {
       student_id: studentId,
       drug_id: drugId,
@@ -143,8 +148,10 @@ export async function saveDrugView(studentId: string, drugId: string, therapyId:
 }
 
 export async function resetStudentLearning(studentId: string) {
-  if (!supabase || !studentId) return
-  await supabase.from("drug_progress").delete().eq("student_id", studentId)
-  await supabase.from("favorites").delete().eq("student_id", studentId)
-  await supabase.from("recent_drugs").delete().eq("student_id", studentId)
+  const client = getSupabaseClient()
+  if (!client || !studentId) return
+  await client.from("drug_progress").delete().eq("student_id", studentId)
+  await client.from("favorites").delete().eq("student_id", studentId)
+  await client.from("recent_drugs").delete().eq("student_id", studentId)
 }
+

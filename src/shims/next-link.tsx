@@ -1,9 +1,18 @@
 import * as React from "react"
 
-export interface LinkProps extends React.ComponentPropsWithoutRef<"a"> {
+export interface LinkProps {
   href: string
   asChild?: boolean
   children?: React.ReactNode
+  className?: string
+  key?: React.Key
+  onClick?: (e: React.MouseEvent<HTMLAnchorElement>) => void
+  target?: string
+  rel?: string
+  title?: string
+  id?: string
+  style?: React.CSSProperties
+  [key: string]: any
 }
 
 export default function Link({ href, asChild, children, className, onClick, ...rest }: LinkProps) {

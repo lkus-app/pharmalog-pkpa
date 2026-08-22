@@ -24,9 +24,18 @@
       ],
       "next/navigation": [
         "./src/shims/next-navigation.ts"
+      ],
+      "next": [
+        "./src/shims/next-stubs.d.ts"
+      ],
+      "next/*": [
+        "./src/shims/next-stubs.d.ts"
       ]
     },
     "allowImportingTsExtensions": true,
     "noEmit": true
-  }
+  },
+  "include": [
+    "src/**/*"
+  ]
 }

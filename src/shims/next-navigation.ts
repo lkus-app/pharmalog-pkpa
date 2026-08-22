@@ -39,19 +39,24 @@ export function usePathname() {
   return pathname
 }
 
+function parseHashParams(): Record<string, string> {
+  if (typeof window === "undefined") return {}
+  const hash = window.location.hash ? window.location.hash.slice(1) : ""
+  const parts = hash.split("/").filter(Boolean)
+  const res: Record<string, string> = {}
+  if (parts[0] === "learning") {
+    if (parts[1]) res.therapyId = decodeURIComponent(parts[1])
+    if (parts[2]) res.drugId = decodeURIComponent(parts[2])
+  }
+  return res
+}
+
 export function useParams(): Record<string, string> {
-  const [params, setParams] = useState<Record<string, string>>({})
+  const [params, setParams] = useState<Record<string, string>>(parseHashParams)
 
   useEffect(() => {
     const parse = () => {
-      const hash = window.location.hash ? window.location.hash.slice(1) : ""
-      const parts = hash.split("/").filter(Boolean)
-      const res: Record<string, string> = {}
-      if (parts[0] === "learning") {
-        if (parts[1]) res.therapyId = decodeURIComponent(parts[1])
-        if (parts[2]) res.drugId = decodeURIComponent(parts[2])
-      }
-      setParams(res)
+      setParams(parseHashParams())
     }
     parse()
     window.addEventListener("hashchange", parse)
