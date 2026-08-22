@@ -6,7 +6,7 @@ import { useAppStore } from "@/components/app-store-provider"
 import { THERAPIES, getAllDrugs } from "@/lib/therapies"
 import { getFilledNotesCount, hasNotesContent, calculateOverallProgress } from "@/lib/mappers"
 import { downloadJson } from "@/lib/storage"
-import { generateStudentPdf, formatStudentFilename } from "@/lib/pdf-report"
+import { generateStudentPdf, printStudentReport, formatStudentFilename } from "@/lib/pdf-report"
 import {
   User,
   GraduationCap,
@@ -129,17 +129,14 @@ export function PortfolioView() {
     }
   }
 
-  // Dialog Cetak Browser dengan default file title Nama_NIM
+  // Dialog Cetak Browser dengan tampilan tabel bersih & bebas blank
   const handlePrint = () => {
-    if (typeof window !== "undefined") {
-      const originalTitle = document.title
-      const defaultFilename = formatStudentFilename(profile, "pdf").replace(/\.pdf$/i, "")
-      document.title = defaultFilename
-      window.print()
-      setTimeout(() => {
-        document.title = originalTitle
-      }, 1500)
-    }
+    printStudentReport({
+      profile,
+      entries,
+      completedDrugsCount: overall.completed,
+      filledNotesCount: totalNotesFilled,
+    })
   }
 
   if (!hydrated) {
