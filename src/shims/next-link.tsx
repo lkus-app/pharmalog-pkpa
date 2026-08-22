@@ -1,12 +1,14 @@
-import React from "react"
+import * as React from "react"
 
-export interface LinkProps extends React.AnchorHTMLAttributes<HTMLAnchorElement> {
+export interface LinkProps extends React.ComponentPropsWithoutRef<"a"> {
   href: string
   asChild?: boolean
   children?: React.ReactNode
 }
 
-export default function Link({ href, asChild, children, className, onClick, ...props }: LinkProps) {
+export default function Link({ href, asChild, children, className, onClick, ...rest }: LinkProps) {
+  const { asChild: _ignored, ...props } = rest as any
+
   const handleClick = (e: React.MouseEvent<HTMLAnchorElement>) => {
     if (onClick) {
       onClick(e)

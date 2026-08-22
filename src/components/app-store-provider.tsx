@@ -20,6 +20,8 @@ import type {
   StudentProfile,
   SaveStatus,
 } from "@/lib/types"
+
+export type { SaveStatus }
 import {
   fetchWorkspace,
   saveDrugNotes,

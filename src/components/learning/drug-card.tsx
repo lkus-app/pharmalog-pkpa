@@ -1,3 +1,4 @@
+import React from "react"
 import { Heart } from "lucide-react"
 import Link from "next/link"
 import { LinearProgress } from "@/components/shared/linear-progress"
@@ -14,6 +15,7 @@ export function DrugCard({
   drug: Drug
   progress: DrugProgress
   favorite: boolean
+  key?: React.Key
 }) {
   return (
     <Link href={`/learning/${drug.therapyId}/${drug.id}`} className="block h-full">
