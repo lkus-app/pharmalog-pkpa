@@ -29,22 +29,22 @@ interface SupabaseConfigModalProps {
 }
 
 export function SupabaseConfigModal({ isOpen, onClose }: SupabaseConfigModalProps) {
-  const { isCloudConnected, refreshData } = useAppStore()
+  const { isCloudConnected, isAdmin, refreshData } = useAppStore()
   const [url, setUrl] = useState("")
   const [anonKey, setAnonKey] = useState("")
   const [isTesting, setIsTesting] = useState(false)
   const [testResult, setTestResult] = useState<{ success: boolean; message: string } | null>(null)
 
   useEffect(() => {
-    if (isOpen) {
+    if (isOpen && isAdmin) {
       const creds = getSupabaseCredentials()
       setUrl(creds.url || "")
       setAnonKey(creds.anonKey || "")
       setTestResult(null)
     }
-  }, [isOpen])
+  }, [isOpen, isAdmin])
 
-  if (!isOpen) return null
+  if (!isOpen || !isAdmin) return null
 
   const handleTestAndSave = async (e: React.FormEvent) => {
     e.preventDefault()

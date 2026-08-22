@@ -141,21 +141,23 @@ function MainAppShell() {
             </div>
           </button>
 
-          {/* Sync status & Profile info */}
+          {/* Sync status (Hanya untuk Admin) & Profile info */}
           <div className="flex items-center gap-3">
-            <button
-              type="button"
-              onClick={() => setIsSupabaseModalOpen(true)}
-              className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border transition cursor-pointer hover:shadow-xs ${
-                isCloudConnected
-                  ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
-                  : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
-              }`}
-              title="Klik untuk melihat atau mengatur koneksi Supabase"
-            >
-              {isCloudConnected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
-              <span>{isCloudConnected ? "Cloud Aktif" : "Local Mode"}</span>
-            </button>
+            {isAdmin && (
+              <button
+                type="button"
+                onClick={() => setIsSupabaseModalOpen(true)}
+                className={`inline-flex items-center gap-1.5 rounded-full px-2.5 py-1 text-xs font-medium border transition cursor-pointer hover:shadow-xs ${
+                  isCloudConnected
+                    ? "bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100"
+                    : "bg-amber-50 text-amber-700 border-amber-200 hover:bg-amber-100"
+                }`}
+                title="Kelola Koneksi Database Supabase (Panel Admin)"
+              >
+                {isCloudConnected ? <Wifi className="size-3.5" /> : <WifiOff className="size-3.5" />}
+                <span>{isCloudConnected ? "Cloud Aktif (Admin)" : "Local Mode (Admin)"}</span>
+              </button>
+            )}
 
             <button
               type="button"

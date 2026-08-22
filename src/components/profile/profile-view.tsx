@@ -119,70 +119,74 @@ function ProfileForm() {
         </CardContent>
       </Card>
 
-      {/* Card Status Penyimpanan Database & Supabase */}
-      <Card className="shadow-sm">
-        <CardHeader>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Database className="size-5 text-emerald-600" />
-              <CardTitle>Sinkronisasi Supabase</CardTitle>
-            </div>
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => setIsModalOpen(true)}
-              className="gap-1.5 text-xs"
-            >
-              <Settings className="size-3.5" />
-              <span>Kelola Koneksi</span>
-            </Button>
-          </div>
-          <CardDescription>
-            Status koneksi penyimpanan data klinis ke Cloud Database Supabase.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div
-            className={`flex items-center justify-between rounded-xl border p-4 ${
-              isCloudConnected
-                ? "border-emerald-200 bg-emerald-50/50"
-                : "border-amber-200 bg-amber-50/50"
-            }`}
-          >
-            <div className="flex items-center gap-3">
-              {isCloudConnected ? (
-                <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
-                  <Wifi className="size-5" />
+      {/* Card Status Penyimpanan Database & Supabase (HANYA UNTUK ADMIN) */}
+      {isAdmin && (
+        <>
+          <Card className="shadow-sm">
+            <CardHeader>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Database className="size-5 text-emerald-600" />
+                  <CardTitle>Koneksi Supabase (Admin)</CardTitle>
                 </div>
-              ) : (
-                <div className="flex size-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
-                  <WifiOff className="size-5" />
-                </div>
-              )}
-              <div>
-                <h4 className="text-sm font-bold text-slate-900">
-                  {isCloudConnected ? "Cloud Supabase Aktif & Tersambung" : "Mode Lokal (Offline-First)"}
-                </h4>
-                <p className="text-xs text-muted-foreground mt-0.5">
-                  {isCloudConnected
-                    ? "Setiap perubahan catatan otomatis disinkronkan ke Supabase."
-                    : "Data disimpan di LocalStorage perangkat ini. Klik tombol di atas untuk menyambungkan Supabase URL & Key."}
-                </p>
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => setIsModalOpen(true)}
+                  className="gap-1.5 text-xs"
+                >
+                  <Settings className="size-3.5" />
+                  <span>Kelola Koneksi</span>
+                </Button>
               </div>
-            </div>
-            <Button
-              size="sm"
-              variant={isCloudConnected ? "outline" : "default"}
-              onClick={() => setIsModalOpen(true)}
-              className={isCloudConnected ? "text-xs" : "bg-emerald-600 hover:bg-emerald-700 text-white text-xs"}
-            >
-              {isCloudConnected ? "Pengaturan" : "Sambungkan Supabase"}
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              <CardDescription>
+                Pengaturan integrasi cloud database Supabase untuk sinkronisasi data seluruh mahasiswa.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div
+                className={`flex items-center justify-between rounded-xl border p-4 ${
+                  isCloudConnected
+                    ? "border-emerald-200 bg-emerald-50/50"
+                    : "border-amber-200 bg-amber-50/50"
+                }`}
+              >
+                <div className="flex items-center gap-3">
+                  {isCloudConnected ? (
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                      <Wifi className="size-5" />
+                    </div>
+                  ) : (
+                    <div className="flex size-10 items-center justify-center rounded-xl bg-amber-100 text-amber-700">
+                      <WifiOff className="size-5" />
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900">
+                      {isCloudConnected ? "Cloud Supabase Aktif & Tersambung" : "Mode Lokal (Offline-First)"}
+                    </h4>
+                    <p className="text-xs text-muted-foreground mt-0.5">
+                      {isCloudConnected
+                        ? "Seluruh data mahasiswa tersinkronisasi langsung ke Supabase."
+                        : "Konfigurasi URL & Anon Key Supabase untuk mengaktifkan sinkronisasi cloud."}
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  size="sm"
+                  variant={isCloudConnected ? "outline" : "default"}
+                  onClick={() => setIsModalOpen(true)}
+                  className={isCloudConnected ? "text-xs" : "bg-emerald-600 hover:bg-emerald-700 text-white text-xs"}
+                >
+                  {isCloudConnected ? "Pengaturan" : "Sambungkan Supabase"}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
 
-      <SupabaseConfigModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+          <SupabaseConfigModal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)} />
+        </>
+      )}
 
       {isAdmin ? (
         <p className="text-xs text-muted-foreground">

@@ -155,3 +155,102 @@ export async function resetStudentLearning(studentId: string) {
   await client.from("recent_drugs").delete().eq("student_id", studentId)
 }
 
+export interface StudentSubmission {
+  profile: StudentProfile
+  entries: Record<string, any>
+  completedDrugsCount: number
+  filledNotesCount: number
+  lastUpdated: string
+}
+
+export async function fetchAllStudentsWithInputs(): Promise<StudentSubmission[]> {
+  const client = getSupabaseClient()
+  if (!client) return []
+
+  try {
+    // 1. Ambil semua mahasiswa non-admin
+    const { data: students, error: studentError } = await client
+      .from("students")
+      .select("*")
+      .neq("role", "admin")
+      .neq("nim", "ADMIN001")
+      .order("name", { ascending: true })
+
+    if (studentError || !students) {
+      console.error("Gagal mengambil data mahasiswa:", studentError)
+      return []
+    }
+
+    // 2. Ambil seluruh data drug_progress
+    const { data: allProgress, error: progError } = await client
+      .from("drug_progress")
+      .select("*")
+
+    if (progError) {
+      console.error("Gagal mengambil progress obat:", progError)
+    }
+
+    const progressByStudent: Record<string, Record<string, any>> = {}
+
+    if (allProgress) {
+      for (const item of allProgress) {
+        if (!progressByStudent[item.student_id]) {
+          progressByStudent[item.student_id] = {}
+        }
+        progressByStudent[item.student_id][item.drug_id] = {
+          notes: sanitizeNotes(item.notes),
+          markedComplete: Boolean(item.is_completed),
+          updatedAt: item.updated_at || new Date().toISOString(),
+        }
+      }
+    }
+
+    const result: StudentSubmission[] = students.map((s) => {
+      const studentEntries = progressByStudent[s.id] || {}
+      let completedCount = 0
+      let filledCount = 0
+
+      for (const drugId of Object.keys(studentEntries)) {
+        const entry = studentEntries[drugId]
+        if (entry.markedComplete) completedCount++
+        const notes = entry.notes || {}
+        if (
+          notes.indication ||
+          notes.dosage ||
+          notes.dose ||
+          notes.usage ||
+          notes.sideEffects ||
+          notes.contraindications ||
+          notes.interactions ||
+          notes.specialInstructions ||
+          notes.patientEducation ||
+          notes.education
+        ) {
+          filledCount++
+        }
+      }
+
+      return {
+        profile: {
+          id: s.id,
+          name: s.name,
+          nim: s.nim,
+          pharmacyName: s.pharmacy_name || s.pharmacy || "-",
+          preceptorName: s.preceptor_name || s.preceptor || "-",
+          period: s.period || "-",
+          role: s.role || "student",
+        },
+        entries: studentEntries,
+        completedDrugsCount: completedCount,
+        filledNotesCount: filledCount,
+        lastUpdated: s.updated_at || s.created_at || new Date().toISOString(),
+      }
+    })
+
+    return result
+  } catch (e) {
+    console.error("Error fetchAllStudentsWithInputs:", e)
+    return []
+  }
+}
+
